@@ -54,3 +54,14 @@ services:
       -c shared_buffers=512MB
       -c wal_compression=on
     restart: always
+
+  portainer:
+    container_name: portainer
+    image: portainer/portainer-ce:latest
+    restart: always
+    ports:
+      - '9000:9000'
+      - '8000:8000'
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /XANO/appdata/portainer:/data
