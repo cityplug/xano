@@ -84,7 +84,7 @@ echo -e "${YELLOW}Memory:${NC} $(free -m | awk 'NR==2 {printf "%sMB / %sMB (%.2f
 echo -e "${RED}IPv4 Address:${NC} $(hostname -I | awk '{print $1}')"
 if command -v docker &> /dev/null; then
     echo -e "${BLUE}Docker Containers:${NC} $(docker ps -q | wc -l)"
-    docker ps --format "  ${GREEN}Container:${NC} {{.Names}} ${YELLOW}Status:${NC} {{.Status}}" | sed 's/^/  /'
+    docker ps --format "  ${GREEN}Container:${NC} {{.Names}} ${YELLOW}Status:${NC} {{.Status}} ${RED}Ports:${NC} {{.Ports}}" | sed 's/^/  /'
 fi
 EOF
 

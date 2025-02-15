@@ -39,7 +39,7 @@ echo "### Setting up Immich Configuration ###"
 cd "$XANO_CONFIG"
 
 ## Download Docker Compose File
-sudo wget -O docker-compose.yml https://github.com/cityplug/xano/blob/main/docker-compose.yml
+sudo wget -O docker-compose.yml https://raw.githubusercontent.com/cityplug/xano/refs/heads/main/docker-compose.yml
 
 ## Create .env File
 echo "### Creating .env File ###"

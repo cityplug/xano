@@ -22,7 +22,7 @@ services:
     container_name: immich_redis
     image: docker.io/redis:6.2-alpine@sha256:905c4ee67b8e0aa955331960d2aa745781e6bd89afc44a8584bfd13bc890f0ae
     healthcheck:
-      test: redis-cli ping || exit 1
+      test: ["CMD", "redis-cli", "ping"]
     restart: always
 
   database:
@@ -43,7 +43,6 @@ services:
         echo "checksum failure count is $$Chksum";
         [ "$$Chksum" = '0' ] || exit 1
       interval: 5m
-      start_interval: 30s
       start_period: 5m
     command: >-
       postgres
@@ -65,3 +64,13 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /XANO/appdata/portainer:/data
+
+  watchtower:
+    container_name: watchtower
+    image: containrrr/watchtower
+    restart: always
+    environment:
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_POLL_INTERVAL=86400  # Checks for updates once per day
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
