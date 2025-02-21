@@ -77,14 +77,42 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-echo -e "${BLUE}System info as of: ${GREEN}$(date)${NC}"
-neofetch
-echo -e "${YELLOW}Disk Usage:${NC} $(df -h / | awk 'NR==2 {print $5 " used of " $2}')"
-echo -e "${YELLOW}Memory:${NC} $(free -m | awk 'NR==2 {printf "%sMB / %sMB (%.2f%%)", $3, $2, $3*100/$2 }')"
-echo -e "${RED}IPv4 Address:${NC} $(hostname -I | awk '{print $1}')"
+# Display system date and time
+echo -e "System info as of: ${RED}$(date)${NC}"
+
+# Display OS, Host, Kernel, and CPU information from neofetch
+os_info=$(grep PRETTY_NAME /etc/os-release | cut -d '=' -f2 | tr -d '"')
+host_info=$(hostnamectl | grep "Virtualization" | awk '{print $2, $3, $4, $5}')
+kernel_info=$(uname -r)
+cpu_info=$(lscpu | grep "Model name" | head -n1 | awk -F ':' '{print $2}' | sed 's/^ *//')
+
+echo -e "${RED}OS:${NC} $os_info"
+echo -e "${RED}Host:${NC} $host_info"
+echo -e "${RED}Kernel:${NC} $kernel_info"
+echo -e "${RED}CPU:${NC} $cpu_info"
+
+# Display system load
+echo -e "${YELLOW}System Load:${NC} $(cat /proc/loadavg | awk '{print $1, $2, $3}')"
+
+# Display disk usage for root
+disk_usage=$(df -h / | awk 'NR==2 {print $3 " used of " $2}')
+echo -e "${YELLOW}Disk Usage:${NC} $disk_usage"
+
+# Display memory usage
+mem_usage=$(free -m | awk 'NR==2 {printf "%sMB / %sMB (%.2f%%)", $3, $2, $3*100/$2 }')
+echo -e "${YELLOW}Memory Usage:${NC} $mem_usage"
+
+# Display number of processes
+echo -e "${YELLOW}Processes:${NC} $(ps aux --no-heading | wc -l)"
+
+# Display IPv4 addresses for each interface
+echo -e "${RED}IPv4 Addresses:${NC}"
+ip -4 -o addr show | awk '{print "  " $2 ": " $4}'
+
+# Display running Docker containers if Docker is installed
 if command -v docker &> /dev/null; then
     echo -e "${BLUE}Docker Containers:${NC} $(docker ps -q | wc -l)"
-    docker ps --format "  ${GREEN}Container:${NC} {{.Names}} ${YELLOW}Status:${NC} {{.Status}} ${RED}Ports:${NC} {{.Ports}}" | sed 's/^/  /'
+    docker ps --format "  Container: ${BLUE}{{.Names}}${NC} Status: {{.Status}} Ports: {{.Ports}}"
 fi
 EOF
 
