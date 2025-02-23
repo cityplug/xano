@@ -51,22 +51,26 @@ for service in "${SERVICES[@]}"; do
     fi
 done
 
-## Installing Packages and Useful Tools
-echo "### Installing Required Packages ###"
-PACKAGES=(git ufw curl ca-certificates gnupg software-properties-common zram-tools)
+echo "### Installing Required Packages and Tools ###"
+PACKAGES=(git ufw curl ca-certificates gnupg software-properties-common zram-tools htop lm-sensors)
 for pkg in "${PACKAGES[@]}"; do
     dpkg -l | grep -qw "$pkg" || sudo apt install -y "$pkg"
 done
-echo "### Installing Tools ###"
-for pkg in neofetch htop lm-sensors; do
-    if ! dpkg -l | grep -q "$pkg"; then
-        sudo apt-get install -y "$pkg"
-    fi
-done
 
-## Customizing MOTD
+# Load OS release information
+. /etc/os-release
+
+echo "### Adding Debian Backports Repository and Installing Cockpit ###"
+echo "deb http://deb.debian.org/debian ${VERSION_CODENAME}-backports main" | sudo tee /etc/apt/sources.list.d/backports.list
+sudo apt update && sudo apt install -t ${VERSION_CODENAME}-backports -y cockpit
+
+
+## Removing Default Ubuntu/Debian Legal Messages
+sudo tee /etc/issue /etc/issue.net <<< "" > /dev/null
+sudo rm -f /etc/motd && echo "Removed /etc/motd" || echo "/etc/motd not found, skipping."
+
 echo "### Customizing MOTD ###"
-sudo chmod -x /etc/update-motd.d/*
+[[ -d /etc/update-motd.d ]] && sudo chmod -x /etc/update-motd.d/*
 
 MOTD_SCRIPT="/etc/update-motd.d/00-custom"
 sudo tee "$MOTD_SCRIPT" > /dev/null << 'EOF'
@@ -112,11 +116,11 @@ ip -4 -o addr show | awk '{print "  " $2 ": " $4}'
 # Display running Docker containers if Docker is installed
 if command -v docker &> /dev/null; then
     echo -e "${BLUE}Docker Containers:${NC} $(docker ps -q | wc -l)"
-    docker ps --format "  Container: ${BLUE}{{.Names}}${NC} Status: {{.Status}} Ports: {{.Ports}}"
+    docker ps --format "  Container: {{.Names}} {{.Status}} Ports: {{.Ports}}"
 fi
 EOF
 
-sudo chmod +x "$MOTD_SCRIPT"
+sudo chmod +x "$MOTD_SCRIPT" && echo "### MOTD Customization Complete ###"
 
 ## Securing SSH Server
 echo "### Securing SSH Server ###"
@@ -152,6 +156,7 @@ sleep 3
 sudo ufw allow from 10.1.1.0/24 to any
 sudo ufw delete allow 22 2>/dev/null || true # Ensure default SSH (22) is removed
 sudo ufw allow "$SSH_PORT"
+sudo ufw allow 9090/tcp  # Cockpit
 sudo ufw default deny incoming
 sudo ufw default allow outgoing
 sudo ufw logging on
