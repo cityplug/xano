@@ -59,19 +59,24 @@ done
 
 # Load OS release information
 . /etc/os-release
-
 echo "### Adding Debian Backports Repository and Installing Cockpit ###"
 echo "deb http://deb.debian.org/debian ${VERSION_CODENAME}-backports main" | sudo tee /etc/apt/sources.list.d/backports.list
 sudo apt update && sudo apt install -t ${VERSION_CODENAME}-backports -y cockpit
 
-
 ## Removing Default Ubuntu/Debian Legal Messages
 sudo tee /etc/issue /etc/issue.net <<< "" > /dev/null
 sudo rm -f /etc/motd && echo "Removed /etc/motd" || echo "/etc/motd not found, skipping."
+sudo systemctl disable --now cockpit-motd.service
 
 echo "### Customizing MOTD ###"
-[[ -d /etc/update-motd.d ]] && sudo chmod -x /etc/update-motd.d/*
+if [[ -d /etc/update-motd.d ]]; then
+    sudo chmod -x /etc/update-motd.d/*
+    echo "Disabled scripts in /etc/update-motd.d/"
+fi
+sudo rm -f /etc/profile.d/wifi-check.sh && echo "Removed Wi-Fi check script" || echo "Wi-Fi check script not found, skipping."
 
+MOTD_SCRIPT="/etc/update-motd.d/00-custom"
+sudo tee "$MOTD_SCRIPT" > /dev/null << 'EOF'
 MOTD_SCRIPT="/etc/update-motd.d/00-custom"
 sudo tee "$MOTD_SCRIPT" > /dev/null << 'EOF'
 #!/bin/bash
@@ -83,10 +88,8 @@ NC='\033[0m'
 
 # Display system date and time
 echo -e "System info as of: ${RED}$(date)${NC}"
-
-# Display OS, Host, Kernel, and CPU information from neofetch
 os_info=$(grep PRETTY_NAME /etc/os-release | cut -d '=' -f2 | tr -d '"')
-host_info=$(hostnamectl | grep "Virtualization" | awk '{print $2, $3, $4, $5}')
+host_info=$(tr -d '\0' < /proc/device-tree/model)
 kernel_info=$(uname -r)
 cpu_info=$(lscpu | grep "Model name" | head -n1 | awk -F ':' '{print $2}' | sed 's/^ *//')
 
@@ -95,20 +98,19 @@ echo -e "${RED}Host:${NC} $host_info"
 echo -e "${RED}Kernel:${NC} $kernel_info"
 echo -e "${RED}CPU:${NC} $cpu_info"
 
+# Display CPU temperature
+temp=$(vcgencmd measure_temp | grep -oP '(?<=temp=)[0-9.]+')
+echo -e "${YELLOW}CPU Temperature:${NC} ${temp}°C"
 # Display system load
 echo -e "${YELLOW}System Load:${NC} $(cat /proc/loadavg | awk '{print $1, $2, $3}')"
-
 # Display disk usage for root
 disk_usage=$(df -h / | awk 'NR==2 {print $3 " used of " $2}')
 echo -e "${YELLOW}Disk Usage:${NC} $disk_usage"
-
 # Display memory usage
 mem_usage=$(free -m | awk 'NR==2 {printf "%sMB / %sMB (%.2f%%)", $3, $2, $3*100/$2 }')
 echo -e "${YELLOW}Memory Usage:${NC} $mem_usage"
-
 # Display number of processes
 echo -e "${YELLOW}Processes:${NC} $(ps aux --no-heading | wc -l)"
-
 # Display IPv4 addresses for each interface
 echo -e "${RED}IPv4 Addresses:${NC}"
 ip -4 -o addr show | awk '{print "  " $2 ": " $4}'
@@ -245,6 +247,11 @@ for group in ssh-users docker; do
         sudo usermod -aG "$group" "$USERNAME"
     fi
 done
+
+read -p "Would you like to run fan_temp.sh now? (y/n): " run_fan_temp
+if [[ "$run_fan_temp" =~ ^[Yy]$ ]]; then
+    ./fan_temp.sh
+fi
 
 echo "Setup complete. Rebooting in 10s..."
 sleep 10
