@@ -10,6 +10,7 @@ INTERFACE="eth0"
 STATIC_IP="192.168.7.254/24"
 GATEWAY="192.168.7.1"
 DNS_SERVERS="8.8.8.8 8.8.4.4"
+HOSTNAME="xano"
 USERNAME="focal"
 SSH_KEYS_URL="https://github.com/cityplug.keys"
 SSH_CONFIG="/etc/ssh/sshd_config"
@@ -122,6 +123,7 @@ if command -v docker &> /dev/null; then
 fi
 EOF
 
+echo "alias $HOSTNAME='sudo /etc/update-motd.d/00-custom'" >> ~/.bashrc && source ~/.bashrc
 sudo chmod +x "$MOTD_SCRIPT" && echo "### MOTD Customization Complete ###"
 
 ## Securing SSH Server
